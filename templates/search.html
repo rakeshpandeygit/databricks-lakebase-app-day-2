@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Semantic News Search</title>
+  <style>
+    :root {
+      --bg: #f4f6fb;
+      --card-bg: #ffffff;
+      --border: #e4e7ee;
+      --text: #1f2430;
+      --muted: #6b7280;
+      --accent: #4f46e5;
+      --accent-hover: #4338ca;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --radius: 10px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      max-width: 900px;
+      margin: 48px auto;
+      padding: 0 20px;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 4px;
+      line-height: 1.5;
+    }
+
+    .nav {
+      margin: 16px 0 24px 0;
+    }
+
+    .nav a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .nav a:hover {
+      text-decoration: underline;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-top: 24px;
+      box-shadow: 0 1px 3px rgba(16, 24, 40, 0.04);
+    }
+
+    label {
+      display: block;
+      margin-top: 16px;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--text);
+    }
+    label:first-child { margin-top: 0; }
+
+    input[type="text"],
+    textarea {
+      width: 100%;
+      padding: 10px 12px;
+      margin-top: 6px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.15s ease;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    input[type="text"]:focus,
+    textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+    }
+
+    .form-row {
+      display: flex;
+      gap: 16px;
+      align-items: flex-end;
+    }
+
+    .form-row > div {
+      flex: 1;
+    }
+
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      margin-top: 6px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      background: white;
+      cursor: pointer;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+    }
+
+    button {
+      margin-top: 18px;
+      padding: 10px 18px;
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      transition: background 0.15s ease;
+    }
+    button:hover { background: var(--accent-hover); }
+    button:active { transform: translateY(1px); }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    #result {
+      margin-top: 16px;
+      white-space: pre-wrap;
+      background: #f6f6f6;
+      padding: 12px 14px;
+      border-radius: 8px;
+      min-height: 20px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    #result:empty { display: none; }
+
+    .result-item {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+      transition: box-shadow 0.15s ease;
+    }
+
+    .result-item:hover {
+      box-shadow: 0 2px 8px rgba(16, 24, 40, 0.08);
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .result-title {
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--text);
+      margin: 0;
+    }
+
+    .similarity-score {
+      background: var(--success);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      margin-left: 8px;
+    }
+
+    .result-meta {
+      color: var(--muted);
+      font-size: 13px;
+      margin: 4px 0;
+    }
+
+    .result-meta strong {
+      color: var(--text);
+    }
+
+    .result-chunk {
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.6;
+      margin-top: 8px;
+      padding: 8px;
+      background: #f9fafb;
+      border-radius: 6px;
+    }
+
+    .ticker-badge {
+      display: inline-block;
+      background: var(--accent);
+      color: white;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--muted);
+    }
+
+    .loading {
+      text-align: center;
+      color: var(--muted);
+      padding: 24px;
+      font-size: 14px;
+    }
+
+    #results-container:empty + .empty-state { display: block; }
+    #results-container:not(:empty) + .empty-state { display: none; }
+  </style>
+</head>
+<body>
+  <h1>🔍 Semantic News Search</h1>
+  <p class="hint">Search through news articles using natural language. The system finds relevant articles based on meaning, not just keywords.</p>
+
+  <div class="nav">
+    <a href="/">← Back to Watchlist</a>
+  </div>
+
+  <div class="card">
+    <form id="search-form">
+      <label for="query">Your question or topic</label>
+      <textarea id="query" name="query" placeholder="e.g., What's the latest news about Tesla's production? Or: Show me articles about chip shortages" required></textarea>
+
+      <div class="form-row">
+        <div>
+          <label for="search-type">Search mode</label>
+          <select id="search-type" name="search_type">
+            <option value="documents">Full articles (faster)</option>
+            <option value="chunks">Article chunks (more precise)</option>
+          </select>
+        </div>
+        <div>
+          <label for="limit">Results</label>
+          <select id="limit" name="limit">
+            <option value="5" selected>5</option>
+            <option value="10">10</option>
+            <option value="20">20</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="submit" id="search-btn">Search</button>
+    </form>
+
+    <div id="result"></div>
+  </div>
+
+  <div class="card">
+    <div id="results-container"></div>
+    <div class="empty-state">
+      <p>No results yet. Enter a query above to search.</p>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("search-form");
+    const resultEl = document.getElementById("result");
+    const resultsContainer = document.getElementById("results-container");
+    const searchBtn = document.getElementById("search-btn");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      
+      const query = document.getElementById("query").value;
+      const searchType = document.getElementById("search-type").value;
+      const limit = parseInt(document.getElementById("limit").value);
+
+      resultEl.textContent = "Searching...";
+      resultsContainer.innerHTML = '<div class="loading">🔄 Embedding your query and searching for similar content...</div>';
+      searchBtn.disabled = true;
+
+      try {
+        const resp = await fetch("/api/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query, search_type: searchType, limit }),
+        });
+        const data = await resp.json();
+        
+        if (!resp.ok) {
+          let errorMsg = "Error: " + (data.error || resp.statusText);
+          if (data.instructions) {
+            errorMsg += "\n\n" + data.instructions;
+          }
+          if (data.details) {
+            errorMsg += "\n\nDetails: " + data.details;
+          }
+          resultEl.textContent = errorMsg;
+          resultEl.style.whiteSpace = "pre-wrap";
+          resultsContainer.innerHTML = "";
+          return;
+        }
+
+        resultEl.textContent = `Found ${data.count} result(s) for: "${data.query}"`;
+        displayResults(data.results, data.search_type);
+      } catch (err) {
+        resultEl.textContent = "Request failed: " + err;
+        resultsContainer.innerHTML = "";
+      } finally {
+        searchBtn.disabled = false;
+      }
+    });
+
+    function displayResults(results, searchType) {
+      resultsContainer.innerHTML = "";
+
+      if (!results || results.length === 0) {
+        resultsContainer.innerHTML = '<div class="empty-state">No matching documents found. Try a different query.</div>';
+        return;
+      }
+
+      results.forEach((item, idx) => {
+        const resultDiv = document.createElement("div");
+        resultDiv.className = "result-item";
+
+        const similarity = (item.similarity * 100).toFixed(1);
+        const similarityClass = item.similarity > 0.7 ? "similarity-score" : "similarity-score";
+
+        if (searchType === "documents") {
+          // Backend returns: id, ticker, title, published_utc, model_name, similarity
+          resultDiv.innerHTML = `
+            <div class="result-header">
+              <h3 class="result-title">${item.title || "Untitled"}</h3>
+              <span class="${similarityClass}">${similarity}%</span>
+            </div>
+            <div class="result-meta">
+              <span class="ticker-badge">${item.ticker}</span>
+              ${item.published_utc ? ` • Published: ${new Date(item.published_utc).toLocaleDateString()}` : ""}
+            </div>
+            <div class="result-meta">
+              <strong>ID:</strong> ${item.id} • <strong>Model:</strong> ${item.model_name}
+            </div>
+          `;
+        } else {
+          // Backend returns: id, article_id, ticker, chunk_index, chunk_text, model_name, similarity
+          resultDiv.innerHTML = `
+            <div class="result-header">
+              <h3 class="result-title">Chunk ${item.chunk_index + 1}</h3>
+              <span class="${similarityClass}">${similarity}%</span>
+            </div>
+            <div class="result-meta">
+              <span class="ticker-badge">${item.ticker}</span>
+              • <strong>Article:</strong> ${item.article_id}
+            </div>
+            <div class="result-chunk">${item.chunk_text}</div>
+            <div class="result-meta" style="margin-top: 8px;">
+              <strong>ID:</strong> ${item.id} • <strong>Model:</strong> ${item.model_name}
+            </div>
+          `;
+        }
+
+        resultsContainer.appendChild(resultDiv);
+      });
+    }
+  </script>
+</body>
+</html>

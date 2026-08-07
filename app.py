@@ -16,6 +16,7 @@ import re
 import requests
 from databricks.sdk import WorkspaceClient
 from flask import Flask, jsonify, render_template, request
+from sentence_transformers import SentenceTransformer
 
 import lakebase
 from massive_client import MassiveClient
@@ -26,9 +27,29 @@ logger = logging.getLogger("massive-app")
 app = Flask(__name__)
 _w = WorkspaceClient()
 
+# Initialize the embedding model for vector search
+# Using the same model as the notebook for consistency
+EMBEDDING_MODEL_NAME = os.environ.get(
+    "EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
+)
+_embedding_model = None
+
+
+def get_embedding_model():
+    """Lazy-load the embedding model on first use."""
+    global _embedding_model
+    if _embedding_model is None:
+        logger.info(f"Loading embedding model: {EMBEDDING_MODEL_NAME}")
+        _embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+    return _embedding_model
+
+
 TABLE_NAME = os.environ.get("MASSIVE_TABLE_NAME", "massive_records")
 WATCHLIST_TABLE_NAME = os.environ.get("WATCHLIST_TABLE_NAME", "watchlist")
 NEWS_TABLE_NAME = os.environ.get("NEWS_TABLE_NAME", "ticker_news_documents")
+# Embeddings tables (match the notebook output tables)
+EMBEDDINGS_TABLE_NAME = os.environ.get("EMBEDDINGS_TABLE_NAME", "ticker_news_embeddings")
+CHUNK_EMBEDDINGS_TABLE_NAME = os.environ.get("CHUNK_EMBEDDINGS_TABLE_NAME", "ticker_news_chunk_embeddings")
 
 # Tickers to fetch news for by default (comma-separated), e.g. "AAPL,MSFT,GOOGL"
 DEFAULT_NEWS_TICKERS = [
@@ -284,6 +305,132 @@ def delete_from_watchlist(symbol: str):
         return jsonify({"error": f"{symbol} is not on your watchlist"}), 404
 
     return jsonify({"symbol": symbol, "email": email, "deleted": True})
+
+
+@app.route("/search")
+def search_page():
+    """Render the semantic search UI."""
+    return render_template("search.html")
+
+
+@app.route("/api/search", methods=["POST"])
+def search_news():
+    """
+    Vector semantic search over news articles or chunks using cosine similarity.
+    
+    This is where the cosine similarity computation happens:
+    1. Embed the user's query using SentenceTransformer
+    2. Use pgvector's <=> operator to compute cosine similarity in SQL
+    3. Return top-k most similar results, ranked by similarity
+    
+    Body: {"query": "...", "search_type": "documents|chunks", "limit": 10}
+    """
+    body = request.json if request.is_json else {}
+    query_text = body.get("query", "").strip()
+    search_type = body.get("search_type", "documents")  # documents or chunks
+    limit = int(body.get("limit", 10))
+    
+    if not query_text:
+        return jsonify({"error": "Query text is required"}), 400
+    
+    if limit < 1 or limit > 100:
+        return jsonify({"error": "Limit must be between 1 and 100"}), 400
+    
+    # Check if embeddings tables exist
+    table_to_check = CHUNK_EMBEDDINGS_TABLE_NAME if search_type == "chunks" else EMBEDDINGS_TABLE_NAME
+    try:
+        lakebase.run_query(f"SELECT 1 FROM {table_to_check} LIMIT 0")
+    except Exception as e:
+        logger.warning(f"Embeddings table {table_to_check} not found: {e}")
+        return jsonify({
+            "error": "Vector search is not available yet.",
+            "instructions": "Please run the embedding notebook first: notebooks/ingest_ticker_news_embeddings",
+            "details": f"Table '{table_to_check}' does not exist. Run sql/02_setup_embeddings_table.sql and sql/03_setup_chunk_embeddings_table.sql first."
+        }), 503
+    
+    # Step 1: Embed the query using the same model as the notebook
+    try:
+        model = get_embedding_model()
+        query_embedding = model.encode(query_text, convert_to_tensor=False)
+        # Convert to list for SQL parameter binding
+        embedding_list = query_embedding.tolist()
+    except Exception as e:
+        logger.error(f"Failed to embed query: {e}")
+        return jsonify({"error": f"Failed to generate embedding: {str(e)}"}), 500
+    
+    # Step 2: Perform cosine similarity search using pgvector
+    # The <=> operator computes cosine distance (1 - cosine_similarity)
+    # So smaller values = more similar
+    
+    try:
+        if search_type == "chunks":
+            # Search in article chunks (more precise, as each chunk is a paragraph/section)
+            # Schema: id, article_id, ticker, chunk_index, chunk_text, embedding, model_name, embedded_at
+            sql = f"""
+                SELECT 
+                    ce.id,
+                    ce.article_id,
+                    ce.chunk_text,
+                    ce.chunk_index,
+                    ce.ticker,
+                    ce.model_name,
+                    (1 - (ce.embedding <=> %s::vector)) as similarity
+                FROM {CHUNK_EMBEDDINGS_TABLE_NAME} ce
+                ORDER BY ce.embedding <=> %s::vector
+                LIMIT %s
+            """
+            rows = lakebase.run_query(sql, (str(embedding_list), str(embedding_list), limit))
+            
+            results = [
+                {
+                    "id": row["id"],
+                    "article_id": row["article_id"],
+                    "chunk_text": row["chunk_text"],
+                    "chunk_index": row["chunk_index"],
+                    "ticker": row["ticker"],
+                    "model_name": row["model_name"],
+                    "similarity": float(row["similarity"]),
+                }
+                for row in rows
+            ]
+        else:
+            # Search in full documents (faster, good for general queries)
+            # Schema: id, ticker, title, published_utc, embedding, model_name, embedded_at
+            sql = f"""
+                SELECT 
+                    e.id,
+                    e.ticker,
+                    e.title,
+                    e.published_utc,
+                    e.model_name,
+                    (1 - (e.embedding <=> %s::vector)) as similarity
+                FROM {EMBEDDINGS_TABLE_NAME} e
+                ORDER BY e.embedding <=> %s::vector
+                LIMIT %s
+            """
+            rows = lakebase.run_query(sql, (str(embedding_list), str(embedding_list), limit))
+            
+            results = [
+                {
+                    "id": row["id"],
+                    "ticker": row["ticker"],
+                    "title": row["title"],
+                    "published_utc": row["published_utc"].isoformat() if row["published_utc"] else None,
+                    "model_name": row["model_name"],
+                    "similarity": float(row["similarity"]),
+                }
+                for row in rows
+            ]
+    except Exception as e:
+        logger.error(f"Search query failed: {e}")
+        return jsonify({"error": f"Search failed: {str(e)}"}), 500
+    
+    return jsonify({
+        "query": query_text,
+        "search_type": search_type,
+        "count": len(results),
+        "results": results,
+    })
 
 
 def _extract_latest_price(data: dict) -> float | None:

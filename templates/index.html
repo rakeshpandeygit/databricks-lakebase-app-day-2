@@ -4,219 +4,422 @@
   <meta charset="UTF-8">
   <title>Massive Stock Watchlist</title>
   <style>
-    :root {
-      --bg: #f4f6fb;
-      --card-bg: #ffffff;
-      --border: #e4e7ee;
-      --text: #1f2430;
-      --muted: #6b7280;
-      --accent: #4f46e5;
-      --accent-hover: #4338ca;
-      --danger: #dc2626;
-      --danger-hover: #b91c1c;
-      --radius: 10px;
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+      color: #2d3748;
     }
-
-    * { box-sizing: border-box; }
-
-    body {
-      font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-      max-width: 640px;
-      margin: 48px auto;
-      padding: 0 20px;
-      color: var(--text);
-      background: var(--bg);
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
     }
-
-    h1 {
-      font-size: 24px;
-      font-weight: 700;
-      margin-bottom: 4px;
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 32px;
+      color: white;
+      position: relative;
     }
-
-    .hint {
-      color: var(--muted);
-      font-size: 13px;
-      margin-top: 4px;
-      line-height: 1.5;
-    }
-
-    .card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px;
-      margin-top: 24px;
-      box-shadow: 0 1px 3px rgba(16, 24, 40, 0.04);
-    }
-
-    label {
-      display: block;
-      margin-top: 16px;
-      font-weight: 600;
-      font-size: 13px;
-      color: var(--text);
-    }
-    label:first-child { margin-top: 0; }
-
-    input[type="text"] {
-      width: 100%;
-      padding: 10px 12px;
-      margin-top: 6px;
-      border: 1px solid var(--border);
+    .search-link {
+      position: absolute;
+      top: 32px;
+      right: 32px;
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 8px 16px;
       border-radius: 8px;
+      text-decoration: none;
       font-size: 14px;
-      transition: border-color 0.15s ease;
+      font-weight: 600;
+      transition: background 0.2s ease;
+    }
+    .search-link:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+    h1 { 
+      font-size: 32px; 
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .header p {
+      opacity: 0.9;
+      font-size: 14px;
+    }
+    .content {
+      padding: 32px;
+    }
+    .form-section {
+      background: #f7fafc;
+      padding: 24px;
+      border-radius: 12px;
+      margin-bottom: 32px;
+      border: 1px solid #e2e8f0;
+    }
+    label { 
+      display: block; 
+      margin-bottom: 8px; 
+      font-weight: 600;
+      color: #4a5568;
+      font-size: 14px;
+    }
+    input[type="text"] { 
+      width: 100%; 
+      padding: 12px 16px; 
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: all 0.3s ease;
     }
     input[type="text"]:focus {
       outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
     }
-
-    button {
-      margin-top: 18px;
-      padding: 10px 18px;
+    button { 
+      padding: 12px 24px; 
       cursor: pointer;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
       border: none;
       border-radius: 8px;
-      background: var(--accent);
-      color: #fff;
-      font-size: 14px;
       font-weight: 600;
-      transition: background 0.15s ease;
+      font-size: 14px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
     }
-    button:hover { background: var(--accent-hover); }
-    button:active { transform: translateY(1px); }
-
-    #result {
-      margin-top: 16px;
-      white-space: pre-wrap;
-      background: #f6f6f6;
-      padding: 12px 14px;
+    button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+    }
+    button:active:not(:disabled) {
+      transform: translateY(0);
+    }
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      background: linear-gradient(135deg, #cbd5e0 0%, #a0aec0 100%);
+    }
+    .button-container {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-top: 20px;
+      flex-wrap: nowrap;
+    }
+    #add-ticker-btn {
+      background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+    }
+    #add-ticker-btn:hover:not(:disabled) {
+      box-shadow: 0 8px 16px rgba(72, 187, 120, 0.3);
+    }
+    #delete-selected {
+      background: linear-gradient(135deg, #f56565 0%, #c53030 100%);
+    }
+    #delete-selected:hover:not(:disabled) {
+      box-shadow: 0 8px 16px rgba(245, 101, 101, 0.3);
+    }
+    #result { 
+      margin-top: 16px; 
+      padding: 12px 16px;
+      background: #edf2f7;
       border-radius: 8px;
+      font-size: 14px;
       min-height: 20px;
-      font-size: 13px;
-      color: var(--muted);
+      border-left: 4px solid #667eea;
     }
-    #result:empty { display: none; }
-
-    table {
-      width: 100%;
-      margin-top: 0;
-      border-collapse: collapse;
+    #result.error {
+      background: #fed7d7;
+      border-left-color: #f56565;
+      color: #c53030;
     }
-    th, td {
-      text-align: left;
-      padding: 10px 8px;
-      border-bottom: 1px solid var(--border);
+    #result.success {
+      background: #c6f6d5;
+      border-left-color: #48bb78;
+      color: #2f855a;
+    }
+    .hint { 
+      color: #718096; 
+      font-size: 13px; 
+      margin-top: 8px;
+      margin-bottom: 0;
+    }
+    .table-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .table-header h2 {
+      font-size: 20px;
+      color: #2d3748;
+      font-weight: 600;
+    }
+    .selection-info {
+      color: #718096;
+      font-size: 14px;
+      margin-left: 8px;
+    }
+    table { 
+      width: 100%; 
+      border-collapse: separate;
+      border-spacing: 0;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+    }
+    thead {
+      background: #f7fafc;
+    }
+    th, td { 
+      text-align: left; 
+      padding: 16px; 
+      border-bottom: 1px solid #e2e8f0;
+    }
+    th { 
+      font-size: 12px; 
+      color: #718096; 
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    td {
+      color: #2d3748;
+    }
+    tbody tr {
+      transition: background 0.2s ease;
+    }
+    tbody tr:hover {
+      background: #f7fafc;
+    }
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+    tbody tr.selected {
+      background: #ebf4ff;
+    }
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: #667eea;
+    }
+    .symbol-badge {
+      display: inline-block;
+      background: #667eea;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-weight: 600;
       font-size: 14px;
     }
-    th {
-      font-size: 12px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
+    .price {
       font-weight: 600;
+      color: #48bb78;
+      font-size: 16px;
     }
-    tbody tr:hover { background: #fafbfe; }
-    tbody tr:last-child td { border-bottom: none; }
-
-    .empty-row td {
-      color: var(--muted);
+    .empty-state {
       text-align: center;
-      padding: 20px 8px;
+      padding: 48px 24px;
+      color: #a0aec0;
     }
-
-    .delete-btn {
-      margin-top: 0;
-      padding: 6px 12px;
-      font-size: 12px;
-      font-weight: 600;
-      background: transparent;
-      color: var(--danger);
-      border: 1px solid var(--danger);
+    .empty-state svg {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 16px;
+      opacity: 0.5;
     }
-    .delete-btn:hover { background: var(--danger); color: #fff; }
-    .delete-btn:disabled { opacity: 0.5; cursor: not-allowed; }
   </style>
 </head>
 <body>
-  <h1>Stock Watchlist</h1>
-  <p class="hint">Enter a single ticker symbol. This sends exactly ONE call to the Massive API to fetch the latest price, then adds it to your watchlist.</p>
+  <div class="container">
+    <div class="header">
+      <h1>📈 Stock Watchlist</h1>
+      <p>Track your favorite stocks in real-time</p>
+      <a href="/search" class="search-link">🔍 Semantic Search</a>
+    </div>
 
-  <div class="card">
-    <form id="stock-form">
-      <label for="symbol">Ticker symbol</label>
-      <input type="text" id="symbol" name="symbol" placeholder="AAPL" required>
-      <button type="submit">Add to watchlist</button>
-    </form>
+    <div class="content">
+      <div class="form-section">
+        <label for="symbol">Add New Ticker</label>
+        <input type="text" id="symbol" name="symbol" placeholder="Enter ticker (e.g., AAPL, TSLA, MSFT)">
+        <p class="hint">Enter a single ticker symbol. This sends exactly ONE call to the Massive API to fetch the latest price.</p>
+        
+        <div class="button-container">
+          <button id="add-ticker-btn" onclick="addToWatchlist()">➕ Add to Watchlist</button>
+          <button id="delete-selected" onclick="deleteSelected()" disabled>🗑️ Delete Selected</button>
+          <span class="selection-info" id="selection-info"></span>
+        </div>
+        
+        <div id="result"></div>
+      </div>
 
-    <div id="result"></div>
-  </div>
+      <div class="table-header">
+        <h2>Your Watchlist</h2>
+      </div>
 
-  <div class="card">
-    <table id="watchlist-table">
-      <thead>
-        <tr>
-          <th>Symbol</th>
-          <th>Email</th>
-          <th>Latest price</th>
-          <th>Updated</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="watchlist-body"></tbody>
-    </table>
+      <table id="watchlist-table">
+        <thead>
+          <tr>
+            <th style="width: 50px;">
+              <input type="checkbox" id="select-all" onchange="toggleSelectAll()">
+            </th>
+            <th>Symbol</th>
+            <th>Email</th>
+            <th>Latest Price</th>
+            <th>Last Updated</th>
+          </tr>
+        </thead>
+        <tbody id="watchlist-body">
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <script>
-    const form = document.getElementById("stock-form");
     const resultEl = document.getElementById("result");
     const watchlistBody = document.getElementById("watchlist-body");
+    const deleteBtn = document.getElementById("delete-selected");
+    const selectionInfo = document.getElementById("selection-info");
+    const selectAllCheckbox = document.getElementById("select-all");
+    const symbolInput = document.getElementById("symbol");
 
     async function loadWatchlist() {
       try {
         const resp = await fetch("/watchlist");
         const data = await resp.json();
         if (!resp.ok) {
-          resultEl.textContent = "Error loading watchlist: " + (data.error || resp.statusText);
+          showResult("Error loading watchlist: " + (data.error || resp.statusText), "error");
           return;
         }
         watchlistBody.innerHTML = "";
-
-        if (!data.length) {
-          const emptyTr = document.createElement("tr");
-          emptyTr.className = "empty-row";
-          emptyTr.innerHTML = `<td colspan="5">Your watchlist is empty. Add a ticker above to get started.</td>`;
-          watchlistBody.appendChild(emptyTr);
+        
+        if (data.length === 0) {
+          watchlistBody.innerHTML = `
+            <tr>
+              <td colspan="5" class="empty-state">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <p>No tickers in your watchlist yet. Add one above to get started!</p>
+              </td>
+            </tr>
+          `;
+          updateSelectionUI();
           return;
         }
-
+        
         data.forEach((row) => {
           const tr = document.createElement("tr");
           const price = row.latest_price !== null && row.latest_price !== undefined
-            ? Number(row.latest_price).toFixed(2)
+            ? "$" + Number(row.latest_price).toFixed(2)
             : "-";
           const updated = row.updated_at ? new Date(row.updated_at).toLocaleString() : "-";
           tr.innerHTML = `
-            <td>${row.symbol}</td>
+            <td><input type="checkbox" class="row-checkbox" value="${row.symbol}" onchange="updateSelectionUI()"></td>
+            <td><span class="symbol-badge">${row.symbol}</span></td>
             <td>${row.email || "-"}</td>
-            <td>${price}</td>
+            <td class="price">${price}</td>
             <td>${updated}</td>
-            <td><button type="button" class="delete-btn" data-symbol="${row.symbol}">Remove</button></td>
           `;
           watchlistBody.appendChild(tr);
         });
+        updateSelectionUI();
       } catch (err) {
-        resultEl.textContent = "Failed to load watchlist: " + err;
+        showResult("Failed to load watchlist: " + err, "error");
       }
     }
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const symbol = document.getElementById("symbol").value;
-      resultEl.textContent = "Adding to watchlist...";
+    function showResult(message, type = "") {
+      resultEl.textContent = message;
+      resultEl.className = type;
+    }
+
+    function toggleSelectAll() {
+      const checkboxes = document.querySelectorAll(".row-checkbox");
+      checkboxes.forEach(cb => {
+        cb.checked = selectAllCheckbox.checked;
+        cb.closest("tr").classList.toggle("selected", cb.checked);
+      });
+      updateSelectionUI();
+    }
+
+    function updateSelectionUI() {
+      const checkboxes = document.querySelectorAll(".row-checkbox");
+      const checked = document.querySelectorAll(".row-checkbox:checked");
+      
+      checkboxes.forEach(cb => {
+        cb.closest("tr").classList.toggle("selected", cb.checked);
+      });
+      
+      if (checked.length === 0) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+      } else if (checked.length === checkboxes.length) {
+        selectAllCheckbox.checked = true;
+        selectAllCheckbox.indeterminate = false;
+      } else {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = true;
+      }
+      
+      if (checked.length > 0) {
+        deleteBtn.disabled = false;
+        selectionInfo.textContent = `${checked.length} selected`;
+      } else {
+        deleteBtn.disabled = true;
+        selectionInfo.textContent = "";
+      }
+    }
+
+    async function deleteSelected() {
+      const checked = document.querySelectorAll(".row-checkbox:checked");
+      const symbols = Array.from(checked).map(cb => cb.value);
+      
+      if (symbols.length === 0) {
+        showResult("No tickers selected", "error");
+        return;
+      }
+      
+      if (!confirm(`Are you sure you want to delete ${symbols.length} ticker(s)?`)) {
+        return;
+      }
+      
+      showResult(`Deleting ${symbols.length} ticker(s)...`, "");
+      
+      try {
+        const resp = await fetch("/watchlist", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ symbols }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+          showResult("Error: " + (data.error || resp.statusText), "error");
+          return;
+        }
+        showResult(`Successfully deleted ${data.deleted} ticker(s)`, "success");
+        selectAllCheckbox.checked = false;
+        loadWatchlist();
+      } catch (err) {
+        showResult("Request failed: " + err, "error");
+      }
+    }
+
+    async function addToWatchlist() {
+      const symbol = symbolInput.value.trim();
+      
+      if (!symbol) {
+        showResult("Please enter a ticker symbol", "error");
+        return;
+      }
+      
+      showResult("Adding to watchlist...", "");
 
       try {
         const resp = await fetch("/watchlist", {
@@ -226,40 +429,23 @@
         });
         const data = await resp.json();
         if (!resp.ok) {
-          resultEl.textContent = "Error: " + (data.error || resp.statusText);
+          showResult("Error: " + (data.error || resp.statusText), "error");
           return;
         }
-        resultEl.textContent = "Added " + data.symbol + " at price " + data.latest_price;
-        document.getElementById("symbol").value = "";
+        const priceText = data.latest_price !== null && data.latest_price !== undefined 
+          ? ` at ${Number(data.latest_price).toFixed(2)}` 
+          : '';
+        showResult(`✅ Added ${data.symbol}${priceText}`, "success");
+        symbolInput.value = "";
         loadWatchlist();
       } catch (err) {
-        resultEl.textContent = "Request failed: " + err;
+        showResult("Request failed: " + err, "error");
       }
-    });
-
-    watchlistBody.addEventListener("click", async (e) => {
-      const btn = e.target.closest(".delete-btn");
-      if (!btn) return;
-
-      const symbol = btn.dataset.symbol;
-      btn.disabled = true;
-      resultEl.textContent = "Removing " + symbol + "...";
-
-      try {
-        const resp = await fetch(`/watchlist/${encodeURIComponent(symbol)}`, {
-          method: "DELETE",
-        });
-        const data = await resp.json();
-        if (!resp.ok) {
-          resultEl.textContent = "Error: " + (data.error || resp.statusText);
-          btn.disabled = false;
-          return;
-        }
-        resultEl.textContent = "Removed " + data.symbol + " from your watchlist.";
-        loadWatchlist();
-      } catch (err) {
-        resultEl.textContent = "Request failed: " + err;
-        btn.disabled = false;
+    }
+    
+    symbolInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        addToWatchlist();
       }
     });
 
