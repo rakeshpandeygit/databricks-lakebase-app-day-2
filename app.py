@@ -286,25 +286,40 @@ def add_to_watchlist():
     return jsonify({"symbol": symbol, "email": email, "latest_price": price})
 
 
-@app.route("/watchlist/<symbol>", methods=["DELETE"])
-def delete_from_watchlist(symbol: str):
-    """Remove a single symbol from the current user's watchlist."""
+@app.route("/watchlist", methods=["DELETE"])
+def delete_from_watchlist():
+    """
+    Delete multiple ticker symbols from the current user's watchlist.
+    Expects a JSON payload with a 'symbols' array.
+    """
     ensure_watchlist_table()
 
-    symbol = symbol.strip().upper() if isinstance(symbol, str) else ""
-    if not symbol or not _TICKER_RE.match(symbol):
-        return jsonify({"error": f"Invalid ticker symbol: {symbol!r}"}), 400
+    if not request.is_json:
+        return jsonify({"error": "Request must be JSON"}), 400
 
+    symbols = request.json.get("symbols", [])
+    if not isinstance(symbols, list) or len(symbols) == 0:
+        return jsonify({"error": "No symbols provided"}), 400
+
+    # Validate all symbols before deleting
+    invalid_symbols = [s for s in symbols if not isinstance(s, str) or not _TICKER_RE.match(s.strip().upper())]
+    if invalid_symbols:
+        return jsonify({"error": f"Invalid ticker symbols: {invalid_symbols}"}), 400
+
+    symbols = [s.strip().upper() for s in symbols]
     email = _current_user_email()
-    deleted = lakebase.run_write(
-        f"DELETE FROM {WATCHLIST_TABLE_NAME} WHERE symbol = %s AND email = %s",
-        (symbol, email),
+
+    # Use a parameterized query with IN clause to delete multiple rows
+    placeholders = ",".join(["%s"] * len(symbols))
+    deleted_count = lakebase.run_write(
+        f"""
+        DELETE FROM {WATCHLIST_TABLE_NAME}
+        WHERE email = %s AND symbol IN ({placeholders})
+        """,
+        (email, *symbols),
     )
 
-    if not deleted:
-        return jsonify({"error": f"{symbol} is not on your watchlist"}), 404
-
-    return jsonify({"symbol": symbol, "email": email, "deleted": True})
+    return jsonify({"deleted": deleted_count, "symbols": symbols})
 
 
 @app.route("/search")
